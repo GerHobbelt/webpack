@@ -21,6 +21,7 @@ describe("Errors", function() {
 		};
 		return files;
 	}
+
 	function getErrors(options, callback) {
 		options.context = base;
 		var c = webpack(options);
@@ -28,7 +29,9 @@ describe("Errors", function() {
 		c.run(function(err, stats) {
 			if(err) throw err;
 			should.strictEqual(typeof stats, "object");
-			stats = stats.toJson({ errorDetails: false });
+			stats = stats.toJson({
+				errorDetails: false
+			});
 			should.strictEqual(typeof stats, "object");
 			stats.should.have.property("errors");
 			stats.should.have.property("warnings");
@@ -125,6 +128,30 @@ describe("Errors", function() {
 			lines[0].should.match(/non-entry/);
 			done();
 		});
-
+	});
+	it("should throw an error when trying to use [chunkhash] when it's invalid", function(done) {
+		getErrors({
+			entry: {
+				a: "./entry-point",
+				b: "./entry-point",
+				c: "./entry-point"
+			},
+			output: {
+				filename: "[chunkhash].js"
+			},
+			plugins: [
+				new webpack.HotModuleReplacementPlugin()
+			]
+		}, function(errors, warnings) {
+			errors.length.should.be.eql(3);
+			warnings.length.should.be.eql(0);
+			errors.forEach(function(error) {
+				var lines = error.split("\n");
+				lines[0].should.match(/chunk (a|b|c)/);
+				lines[2].should.match(/\[chunkhash\].js/);
+				lines[2].should.match(/use \[hash\] instead/);
+			});
+			done();
+		});
 	});
 });
